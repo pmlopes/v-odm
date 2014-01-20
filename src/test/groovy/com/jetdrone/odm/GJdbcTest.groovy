@@ -54,8 +54,8 @@ class GJdbcTest extends TestVerticle {
 
     @Override
     public void start() {
-    	def gvertx = new org.vertx.groovy.core.Vertx( vertx )
-    	def gcontainer = new org.vertx.groovy.platform.Container( container )
+        def gvertx = new org.vertx.groovy.core.Vertx( vertx )
+        def gcontainer = new org.vertx.groovy.platform.Container( container )
         initialize()
         final String address = config.address
 
