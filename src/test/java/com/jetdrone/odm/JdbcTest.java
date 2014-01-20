@@ -70,7 +70,6 @@ public class JdbcTest extends TestVerticle {
                     fail();
                     return;
                 }
-                System.out.println( person ) ;
                 // user has been saved, the ID should be filled now
                 assertNotNull(person.getField(mapper.ID));
                 long id = person.getId().longValue();
