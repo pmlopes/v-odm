@@ -36,40 +36,16 @@ public abstract class JdbcMapper<R extends Record<Number>> extends Mapper<Number
         return sb.toString();
     }
 
-    private String sqlString(String s) {
-        StringBuilder str = new StringBuilder();
-        str.append('\'');
-        for (int i = 0; i < s.length(); i++) {
-            if (s.charAt(i) == '\\'
-                    || s.charAt(i) == '\"'
-                    || s.charAt(i) == '\'') {
-                str.append('\\');
-            }
-            str.append(s.charAt(i));
-        }
-        str.append('\'');
-
-        return str.toString();
-    }
-
-    private String values(R record) {
+    private String placeholders(R record, boolean names) {
         StringBuilder sb = new StringBuilder();
         Set<String> fields = record.getFieldNames();
         if (fields != null) {
             int len = fields.size();
             for (String f : fields) {
-                Object o = record.getValue(f);
-                if (o == null) {
-                    sb.append("null");
-                } else {
-                    if (o instanceof Boolean || o instanceof Number) {
-                        sb.append(o);
-                    } else if (o instanceof String) {
-                        sb.append(sqlString((String) o));
-                    } else {
-                        throw new RuntimeException("Unsupported value type: " + o.getClass().getName());
-                    }
+                if( names ) {
+                    sb.append(f).append("=");
                 }
+                sb.append("?");
                 if (0 != --len) {
                     sb.append(", ");
                 }
@@ -78,39 +54,15 @@ public abstract class JdbcMapper<R extends Record<Number>> extends Mapper<Number
         return sb.toString();
     }
 
-    private String set(R record) {
-        StringBuilder sb = new StringBuilder();
+    private JsonArray values(R record) {
+        List ret = new ArrayList();
         Set<String> fields = record.getFieldNames();
         if (fields != null) {
-            // reduce ID since it will be skipped
-            int len = fields.size() - 1;
             for (String f : fields) {
-                if (ID.equals(f)) {
-                    continue;
-                }
-
-                sb.append(f);
-                sb.append(" = ");
-
-                Object o = record.getValue(f);
-                if (o == null) {
-                    sb.append("null");
-                } else {
-                    if (o instanceof Boolean || o instanceof Number) {
-                        sb.append(o);
-                    } else if (o instanceof String) {
-                        sb.append(sqlString((String) o));
-                    } else {
-                        throw new RuntimeException("Unsupported value type: " + o.getClass().getName());
-                    }
-                }
-                if (0 != --len) {
-                    sb.append(", ");
-                }
+                ret.add(record.getValue(f));
             }
         }
-        return sb.toString();
-
+        return new JsonArray(ret);
     }
 
     @Override
@@ -149,7 +101,7 @@ public abstract class JdbcMapper<R extends Record<Number>> extends Mapper<Number
         final String sql;
 
         try {
-            sql = "UPDATE " + entity + " SET " + set(record) + " " + query;
+            sql = "UPDATE " + entity + " SET " + placeholders(record,true) + " " + query;
         } catch (RuntimeException re) {
             callback.handle(wrapResult(re, (Void) null));
             return;
@@ -157,7 +109,8 @@ public abstract class JdbcMapper<R extends Record<Number>> extends Mapper<Number
 
         final JsonObject json = new JsonObject()
                 .putString("action", "update")
-                .putString("stmt", sql);
+                .putString("stmt", sql)
+                .putArray("values", values(record));
 
         eventBus.send(address, json, new Handler<Message<JsonObject>>() {
             @Override
@@ -179,7 +132,7 @@ public abstract class JdbcMapper<R extends Record<Number>> extends Mapper<Number
         final String sql;
 
         try {
-            sql = "INSERT INTO " + entity + " (" + fields(record) + ") VALUES (" + values(record) + ")";
+            sql = "INSERT INTO " + entity + " (" + fields(record) + ") VALUES (" + placeholders(record,false) + ")";
         } catch (RuntimeException re) {
             callback.handle(wrapResult(re, (Number) null));
             return;
@@ -187,7 +140,8 @@ public abstract class JdbcMapper<R extends Record<Number>> extends Mapper<Number
 
         final JsonObject json = new JsonObject()
                 .putString("action", "insert")
-                .putString("stmt", sql);
+                .putString("stmt", sql)
+                .putArray("values", values(record));
 
         eventBus.send(address, json, new Handler<Message<JsonObject>>() {
             @Override
