@@ -2,12 +2,8 @@ package com.jetdrone.odm
 
 import org.junit.Test
 
-import org.vertx.groovy.core.eventbus.EventBus
-import org.vertx.java.core.AsyncResult
-import org.vertx.java.core.AsyncResultHandler
-import org.vertx.java.core.Handler
-import org.vertx.java.core.eventbus.Message
-import org.vertx.java.core.json.JsonObject
+import org.vertx.groovy.core.Vertx
+import org.vertx.groovy.platform.Container
 
 import org.vertx.testtools.TestVerticle
 
@@ -54,8 +50,8 @@ class GJdbcTest extends TestVerticle {
 
     @Override
     public void start() {
-        def gvertx = new org.vertx.groovy.core.Vertx( vertx )
-        def gcontainer = new org.vertx.groovy.platform.Container( container )
+        def gvertx = new Vertx( vertx )
+        def gcontainer = new Container( container )
         initialize()
         final String address = config.address
 
