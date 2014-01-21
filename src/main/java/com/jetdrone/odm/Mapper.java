@@ -10,9 +10,6 @@ import java.util.List;
 
 public abstract class Mapper<PK, R extends Record<PK>, Q> {
 
-    @SuppressWarnings("unchecked")
-    private static final JsonObject EMPTY = new JsonObject(Collections.EMPTY_MAP);
-
     protected <T> AsyncResult<T> wrapResult(final Throwable error, final T result) {
         return new AsyncResult<T>() {
             @Override
@@ -53,7 +50,7 @@ public abstract class Mapper<PK, R extends Record<PK>, Q> {
     protected abstract R newRecord(final JsonObject json);
 
     protected R newRecord() {
-        return newRecord(EMPTY);
+        return newRecord(new JsonObject());
     }
 
     // Generic find

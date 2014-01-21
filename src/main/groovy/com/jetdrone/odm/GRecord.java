@@ -1,8 +1,6 @@
 package com.jetdrone.odm;
 
 import groovy.lang.Closure;
-import org.vertx.java.core.AsyncResult;
-import org.vertx.java.core.AsyncResultHandler;
 import org.vertx.java.core.Handler;
 
 import java.util.Map;
