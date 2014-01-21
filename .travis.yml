@@ -4,6 +4,7 @@ jdk:
 services:
   - redis
   - postgresql
+  - mongodb
 
 before_script:
   - psql -c 'create database odm;' -U postgres

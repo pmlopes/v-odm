@@ -412,7 +412,7 @@ public class MongoDBTest extends TestVerticle {
     @Override
     public void start() {
         initialize();
-        container.deployModule("io.vertx~mod-mongo-persistor~2.1.0-SNAPSHOT", config, new AsyncResultHandler<String>() {
+        container.deployModule("io.vertx~mod-mongo-persistor~2.1.0", config, new AsyncResultHandler<String>() {
             @Override
             public void handle(AsyncResult<String> asyncResult) {
                 if (asyncResult.failed()) {

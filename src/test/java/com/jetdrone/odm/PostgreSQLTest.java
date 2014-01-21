@@ -437,7 +437,7 @@ public class PostgreSQLTest extends TestVerticle {
     @Override
     public void start() {
         initialize();
-        container.deployModule("io.vertx~mod-mysql-postgresql~0.1.0", config, new AsyncResultHandler<String>() {
+        container.deployModule("io.vertx~mod-mysql-postgresql~0.2.0", config, new AsyncResultHandler<String>() {
             @Override
             public void handle(AsyncResult<String> asyncResult) {
                 if (asyncResult.failed()) {
