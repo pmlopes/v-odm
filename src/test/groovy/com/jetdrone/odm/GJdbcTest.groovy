@@ -9,7 +9,6 @@ import org.vertx.testtools.TestVerticle
 
 import static org.vertx.testtools.VertxAssert.*
 
-
 class GJdbcTest extends TestVerticle {
 
     Map config = [ address: "com.bloidonia.jdbcpersistor" ]
@@ -25,7 +24,7 @@ class GJdbcTest extends TestVerticle {
     }
 
     @Test
-    public void saveNewInstance() {
+    void saveNewInstance() {
         // using the java inner class way
         Person person = mapper.newRecord()
         assertNotNull(person)
@@ -49,7 +48,7 @@ class GJdbcTest extends TestVerticle {
     }
 
     @Override
-    public void start() {
+    void start() {
         def gvertx = new Vertx( vertx )
         def gcontainer = new Container( container )
         initialize()
