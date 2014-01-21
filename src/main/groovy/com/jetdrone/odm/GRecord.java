@@ -22,8 +22,7 @@ public abstract class GRecord<PK> extends Record<PK> {
     }
 
     public Object getAt(String key) {
-        super.getValue(key);
-        return this;
+        return super.getValue(key);
     }
 
     public void save(final Closure<Boolean> handler) {
