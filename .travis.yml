@@ -1,5 +1,11 @@
 language: java
 jdk:
   - openjdk7
+services:
+  - redis
+  - postgresql
+
+before_script:
+  - psql -c 'create database odm;' -U postgres
 
 script: ./gradlew check -S

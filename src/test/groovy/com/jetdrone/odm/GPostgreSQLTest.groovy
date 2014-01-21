@@ -19,9 +19,9 @@ class GPostgreSQLTest extends TestVerticle {
     final JsonObject config = new JsonObject()
             .putString("address", "postgresql.db")
             .putString("connection", "PostgreSQL")
-            .putString("username", "user")
-            .putString("password", "pass")
-            .putString("database", "db");
+            .putString("username", "postgres")
+            //.putString("password", "pass")
+            .putString("database", "odm");
 
     GPostgreSQLPersons mapper
 
