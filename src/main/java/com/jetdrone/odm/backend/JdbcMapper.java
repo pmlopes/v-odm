@@ -55,7 +55,7 @@ public abstract class JdbcMapper<R extends Record<Number>> extends Mapper<Number
     }
 
     private JsonArray values(R record) {
-        List ret = new ArrayList();
+        List<Object> ret = new ArrayList<>();
         Set<String> fields = record.getFieldNames();
         if (fields != null) {
             for (String f : fields) {
@@ -184,7 +184,7 @@ public abstract class JdbcMapper<R extends Record<Number>> extends Mapper<Number
                 JsonObject data = null;
 
                 if (results.size() >= 1) {
-                    data = (JsonObject) results.get(0);
+                    data = results.get(0);
                 }
 
                 callback.handle(wrapResult(null, newRecord(data)));

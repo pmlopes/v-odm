@@ -52,44 +52,44 @@ public class RedisTest extends TestVerticle {
         });
     }
 
-//    @Test
-//    public void loadFromBackend() {
-//        // using the java inner class way
-//        final Person person = mapper.new Person();
-//        // set some fields
-//        person.putString("name", "Paulo");
-//        person.putNumber("age", 33);
-//
-//        person.save(new Handler<Boolean>() {
-//            @Override
-//            public void handle(Boolean saved) {
-//                if (!saved) {
-//                    fail();
-//                    return;
-//                }
-//                // user has been saved, the ID should be filled now
-//                assertNotNull(person.getField(mapper.ID));
-//                String id = person.getId();
-//
-//                // load from the DB
-//                mapper.findOne(id, new AsyncResultHandler<Person>() {
-//                    @Override
-//                    public void handle(AsyncResult<Person> findById) {
-//                        if (findById.failed()) {
-//                            fail(findById.cause().getMessage());
-//                            return;
-//                        }
-//
-//                        Person person1 = findById.result();
-//
-//                        assertEquals("Paulo", person1.getString("name"));
-//                        assertEquals(33, person1.getNumber("age"));
-//                        testComplete();
-//                    }
-//                });
-//            }
-//        });
-//    }
+    @Test
+    public void loadFromBackend() {
+        // using the java inner class way
+        final Person person = mapper.new Person();
+        // set some fields
+        person.putString("name", "Paulo");
+        person.putNumber("age", 33);
+
+        person.save(new Handler<Boolean>() {
+            @Override
+            public void handle(Boolean saved) {
+                if (!saved) {
+                    fail();
+                    return;
+                }
+                // user has been saved, the ID should be filled now
+                assertNotNull(person.getField(mapper.ID));
+                String id = person.getId();
+
+                // load from the DB
+                mapper.findOne(id, new AsyncResultHandler<Person>() {
+                    @Override
+                    public void handle(AsyncResult<Person> findById) {
+                        if (findById.failed()) {
+                            fail(findById.cause().getMessage());
+                            return;
+                        }
+
+                        Person person1 = findById.result();
+
+                        assertEquals("Paulo", person1.getString("name"));
+                        assertEquals(33, person1.getNumber("age"));
+                        testComplete();
+                    }
+                });
+            }
+        });
+    }
 
     @Override
     public void start() {

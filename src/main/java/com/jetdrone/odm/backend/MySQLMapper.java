@@ -21,61 +21,61 @@ public abstract class MySQLMapper<R extends Record<String>> extends Mapper<Strin
 
     @Override
     public void find(final String query, final AsyncResultHandler<List<R>> callback) {
-        throw new UnsupportedOperationException();
+        callback.handle(wrapResult(new UnsupportedOperationException(), (List<R>) null));
     }
 
     @Override
     public void findOne(String query, AsyncResultHandler<R> callback) {
-        throw new UnsupportedOperationException();
+        callback.handle(wrapResult(new UnsupportedOperationException(), (R) null));
     }
 
     @Override
     public void findAll(AsyncResultHandler<List<R>> callback) {
-        throw new UnsupportedOperationException();
+        callback.handle(wrapResult(new UnsupportedOperationException(), (List<R>) null));
     }
 
     @Override
     public void update(String query, R record, AsyncResultHandler<Void> callback) {
-        throw new UnsupportedOperationException();
+        callback.handle(wrapResult(new UnsupportedOperationException(), (Void) null));
     }
 
     @Override
     public void remove(String query, AsyncResultHandler<Void> callback) {
-        throw new UnsupportedOperationException();
+        callback.handle(wrapResult(new UnsupportedOperationException(), (Void) null));
     }
 
     @Override
     public void save(R record, AsyncResultHandler<String> callback) {
-        throw new UnsupportedOperationException();
+        callback.handle(wrapResult(new UnsupportedOperationException(), (String) null));
     }
 
     @Override
     public void findById(String id, AsyncResultHandler<R> callback) {
-        throw new UnsupportedOperationException();
+        callback.handle(wrapResult(new UnsupportedOperationException(), (R) null));
     }
 
     @Override
     public void update(R record, AsyncResultHandler<Void> callback) {
-        throw new UnsupportedOperationException();
+        callback.handle(wrapResult(new UnsupportedOperationException(), (Void) null));
     }
 
     @Override
     public void remove(R record, AsyncResultHandler<Void> callback) {
-        throw new UnsupportedOperationException();
+        callback.handle(wrapResult(new UnsupportedOperationException(), (Void) null));
     }
 
     @Override
     public void count(String query, AsyncResultHandler<Number> callback) {
-        throw new UnsupportedOperationException();
+        callback.handle(wrapResult(new UnsupportedOperationException(), (Number) null));
     }
 
     @Override
     public void count(AsyncResultHandler<Number> callback) {
-        throw new UnsupportedOperationException();
+        callback.handle(wrapResult(new UnsupportedOperationException(), (Number) null));
     }
 
     @Override
     public void truncate(AsyncResultHandler<Void> callback) {
-        throw new UnsupportedOperationException();
+        callback.handle(wrapResult(new UnsupportedOperationException(), (Void) null));
     }
 }
