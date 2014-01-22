@@ -71,7 +71,7 @@ public abstract class RedisMapper<R extends Record<String>> extends Mapper<Strin
                 }
 
                 if ("ok".equals(status)) {
-                    callback.handle(wrapResult(null, newRecord(new JsonObject(event.body().getString("value")))));
+                    callback.handle(wrapResult(null, newRecord(event.body().getObject("value"))));
                 }
             }
         });
