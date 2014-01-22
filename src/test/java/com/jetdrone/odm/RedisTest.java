@@ -34,7 +34,7 @@ public class RedisTest extends TestVerticle {
 
         // set some fields
         person.putString("name", "Paulo");
-        person.putNumber("age", 33);
+        person.putString("age", "33");
         // there is no _id
         assertNull(person.getField(mapper.ID));
         // save
@@ -58,7 +58,7 @@ public class RedisTest extends TestVerticle {
         final Person person = mapper.new Person();
         // set some fields
         person.putString("name", "Paulo");
-        person.putNumber("age", 33);
+        person.putString("age", "33");
 
         person.save(new Handler<Boolean>() {
             @Override
@@ -83,7 +83,7 @@ public class RedisTest extends TestVerticle {
                         Person person1 = findById.result();
 
                         assertEquals("Paulo", person1.getString("name"));
-                        assertEquals(33, person1.getNumber("age"));
+                        assertEquals("33", person1.getString("age"));
                         testComplete();
                     }
                 });
