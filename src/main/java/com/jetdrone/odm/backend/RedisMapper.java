@@ -2,6 +2,7 @@ package com.jetdrone.odm.backend;
 
 import com.jetdrone.odm.Mapper;
 import com.jetdrone.odm.Record;
+import com.jetdrone.odm.backend.impl.AsyncIterator;
 import org.vertx.java.core.AsyncResult;
 import org.vertx.java.core.AsyncResultHandler;
 import org.vertx.java.core.Handler;
@@ -10,6 +11,7 @@ import org.vertx.java.core.eventbus.Message;
 import org.vertx.java.core.json.JsonArray;
 import org.vertx.java.core.json.JsonObject;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -49,7 +51,62 @@ public abstract class RedisMapper<R extends Record<String>> extends Mapper<Strin
 
     @Override
     public void find(final String query, final AsyncResultHandler<List<R>> callback) {
-        callback.handle(wrapResult(new UnsupportedOperationException(), (List<R>) null));
+        JsonArray args = new JsonArray().add(entity + SEP + query);
+
+        final JsonObject json = new JsonObject()
+                .putString("command", "keys")
+                .putArray("args", args);
+
+        eventBus.send(address, json, new Handler<Message<JsonObject>>() {
+            @Override
+            public void handle(Message<JsonObject> event) {
+                final String status = event.body().getString("status");
+
+                if ("error".equals(status)) {
+                    callback.handle(wrapResult(new RuntimeException(event.body().getString("message")), (List<R>) null));
+                    return;
+                }
+
+                if ("ok".equals(status)) {
+                    final JsonArray keys = event.body().getArray("value");
+
+                    // for each key get if from Redis
+                    final List<R> items = new ArrayList<>(keys.size());
+
+                    new AsyncIterator<Object>(keys) {
+                        @Override
+                        public void handle(Object key) {
+                            if (hasNext()) {
+                                JsonArray args = new JsonArray().add(entity + SEP + key);
+
+                                final JsonObject json = new JsonObject()
+                                        .putString("command", "hgetall")
+                                        .putArray("args", args);
+
+                                eventBus.send(address, json, new Handler<Message<JsonObject>>() {
+                                    @Override
+                                    public void handle(Message<JsonObject> event) {
+                                        final String status = event.body().getString("status");
+
+                                        if ("error".equals(status)) {
+                                            callback.handle(wrapResult(new RuntimeException(event.body().getString("message")), (List<R>) null));
+                                            return;
+                                        }
+
+                                        if ("ok".equals(status)) {
+                                            items.add(newRecord(event.body().getObject("value")));
+                                            next();
+                                        }
+                                    }
+                                });
+                            } else {
+                                callback.handle(wrapResult(null, items));
+                            }
+                        }
+                    };
+                }
+            }
+        });
     }
 
     @Override
