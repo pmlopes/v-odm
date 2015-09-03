@@ -1,8 +1,8 @@
 package com.jetdrone.odm;
 
 import com.jetdrone.odm.backend.RedisMapper;
-import org.vertx.java.core.eventbus.EventBus;
-import org.vertx.java.core.json.JsonObject;
+import io.vertx.core.json.JsonObject;
+import io.vertx.redis.RedisClient;
 
 import java.util.Map;
 
@@ -22,8 +22,8 @@ public class RedisPersons extends RedisMapper<RedisPersons.Person> {
         }
     }
 
-    public RedisPersons(EventBus eventBus, String address) {
-        super(eventBus, address, "person");
+    public RedisPersons(RedisClient client) {
+        super(client, "person");
     }
 
     @Override
@@ -32,6 +32,6 @@ public class RedisPersons extends RedisMapper<RedisPersons.Person> {
             return null;
         }
 
-        return new Person(json.toMap());
+        return new Person(json.getMap());
     }
 }

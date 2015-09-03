@@ -1,111 +1,103 @@
 package com.jetdrone.odm;
 
+import io.vertx.core.Vertx;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.redis.RedisClient;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
-import org.vertx.java.core.AsyncResult;
-import org.vertx.java.core.AsyncResultHandler;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.testtools.TestVerticle;
+import io.vertx.core.json.JsonObject;
+import org.junit.runner.RunWith;
 
 import com.jetdrone.odm.RedisPersons.Person;
 
-import static org.vertx.testtools.VertxAssert.*;
+@RunWith(VertxUnitRunner.class)
+public class RedisTest {
 
-public class RedisTest extends TestVerticle {
+  final JsonObject config = new JsonObject()
+      .put("address", "redis.db");
 
-    final JsonObject config = new JsonObject()
-            .putString("address", "redis.db");
+  private Vertx vertx;
+  private RedisPersons mapper;
 
-    private RedisPersons mapper;
+  @Before
+  public void before(TestContext test) {
+    vertx = Vertx.vertx();
+    mapper = new RedisPersons(RedisClient.create(vertx, config));
+  }
 
-    @Test
-    public void createSingleInstance() {
-        // using the java inner class way
-        Person person = mapper.new Person();
-        assertNotNull(person);
-        testComplete();
-    }
+  @After
+  public void after(TestContext test) {
+    vertx.close(test.asyncAssertSuccess());
+  }
 
-    @Test
-    public void saveNewInstance() {
-        // using the java inner class way
-        final Person person = mapper.new Person();
-        assertNotNull(person);
+  @Test
+  public void createSingleInstance(TestContext test) {
+    // using the java inner class way
+    Person person = mapper.new Person();
+    test.assertNotNull(person);
+    test.async().complete();
+  }
 
-        // set some fields
-        person.putString("name", "Paulo");
-        person.putString("age", "33");
-        // there is no _id
-        assertNull(person.getField(mapper.ID));
-        // save
-        person.save(new Handler<Boolean>() {
-            @Override
-            public void handle(Boolean saved) {
-                if (!saved) {
-                    fail();
-                    return;
-                }
-                // user has been saved, the ID should be filled now
-                assertNotNull(person.getField(mapper.ID));
-                testComplete();
-            }
-        });
-    }
+  @Test
+  public void saveNewInstance(TestContext test) {
+    final Async async = test.async();
 
-    @Test
-    public void loadFromBackend() {
-        // using the java inner class way
-        final Person person = mapper.new Person();
-        // set some fields
-        person.putString("name", "Paulo");
-        person.putString("age", "33");
+    // using the java inner class way
+    final Person person = mapper.new Person();
+    test.assertNotNull(person);
 
-        person.save(new Handler<Boolean>() {
-            @Override
-            public void handle(Boolean saved) {
-                if (!saved) {
-                    fail();
-                    return;
-                }
-                // user has been saved, the ID should be filled now
-                assertNotNull(person.getField(mapper.ID));
-                String id = person.getId();
+    // set some fields
+    person.put("name", "Paulo");
+    person.put("age", "33");
+    // there is no _id
+    test.assertNull(person.getValue(mapper.ID));
+    // save
+    person.save(saved -> {
+      if (!saved) {
+        test.fail();
+        return;
+      }
+      // user has been saved, the ID should be filled now
+      test.assertNotNull(person.getValue(mapper.ID));
+      async.complete();
+    });
+  }
 
-                // load from the DB
-                mapper.findOne(id, new AsyncResultHandler<Person>() {
-                    @Override
-                    public void handle(AsyncResult<Person> findById) {
-                        if (findById.failed()) {
-                            fail(findById.cause().getMessage());
-                            return;
-                        }
+  @Test
+  public void loadFromBackend(TestContext test) {
+    final Async async = test.async();
 
-                        Person person1 = findById.result();
+    // using the java inner class way
+    final Person person = mapper.new Person();
+    // set some fields
+    person.put("name", "Paulo");
+    person.put("age", "33");
 
-                        assertEquals("Paulo", person1.getString("name"));
-                        assertEquals("33", person1.getString("age"));
-                        testComplete();
-                    }
-                });
-            }
-        });
-    }
+    person.save(saved -> {
+      if (!saved) {
+        test.fail();
+        return;
+      }
+      // user has been saved, the ID should be filled now
+      test.assertNotNull(person.getValue(mapper.ID));
+      String id = person.getId();
 
-    @Override
-    public void start() {
-        initialize();
-        container.deployModule("io.vertx~mod-redis~1.1.3", config, new AsyncResultHandler<String>() {
-            @Override
-            public void handle(AsyncResult<String> asyncResult) {
-                if (asyncResult.failed()) {
-                    container.logger().error(asyncResult.cause());
-                }
-                assertTrue(asyncResult.succeeded());
-                assertNotNull("deploymentID should not be null", asyncResult.result());
+      // load from the DB
+      mapper.findOne(id, findById -> {
+        if (findById.failed()) {
+          test.fail(findById.cause().getMessage());
+          return;
+        }
 
-                mapper = new RedisPersons(getVertx().eventBus(), config.getString("address"));
-                startTests();
-            }
-        });
-    }
+        Person person1 = findById.result();
+
+        test.assertEquals("Paulo", person1.getString("name"));
+        test.assertEquals("33", person1.getString("age"));
+        async.complete();
+      });
+    });
+  }
 }

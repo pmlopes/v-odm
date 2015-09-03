@@ -1,8 +1,8 @@
 package com.jetdrone.odm;
 
 import com.jetdrone.odm.backend.JdbcMapper;
-import org.vertx.java.core.eventbus.EventBus;
-import org.vertx.java.core.json.JsonObject;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.jdbc.JDBCClient;
 
 import java.util.Map;
 
@@ -22,8 +22,8 @@ public class JdbcPersons extends JdbcMapper<JdbcPersons.Person> {
         }
     }
 
-    public JdbcPersons(EventBus eventBus, String address) {
-        super(eventBus, address, "users");
+    public JdbcPersons(JDBCClient jdbc) {
+        super(jdbc, "users");
     }
 
     @Override
@@ -32,7 +32,7 @@ public class JdbcPersons extends JdbcMapper<JdbcPersons.Person> {
             return null;
         }
 
-        return new Person(json.toMap());
+        return new Person(json.getMap());
     }
 
 }

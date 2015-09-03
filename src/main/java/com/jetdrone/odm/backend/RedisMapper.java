@@ -3,356 +3,189 @@ package com.jetdrone.odm.backend;
 import com.jetdrone.odm.Mapper;
 import com.jetdrone.odm.Record;
 import com.jetdrone.odm.backend.impl.AsyncIterator;
-import org.vertx.java.core.AsyncResult;
-import org.vertx.java.core.AsyncResultHandler;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.eventbus.EventBus;
-import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.json.JsonArray;
-import org.vertx.java.core.json.JsonObject;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.json.JsonArray;
+import io.vertx.redis.RedisClient;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 public abstract class RedisMapper<R extends Record<String>> extends Mapper<String, R, String> {
 
-    private static final String ALL = "*";
-    private static final String SEP = ":";
+  private static final String ALL = "*";
+  private static final String SEP = ":";
 
-    public RedisMapper(EventBus eventBus, String address, String entity) {
-        super(eventBus, address, entity, "id");
-    }
+  private final RedisClient redis;
 
-    public RedisMapper(EventBus eventBus, String address, String entity, String id) {
-        super(eventBus, address, entity, id);
-    }
+  public RedisMapper(RedisClient redis, String entity) {
+    this(redis, entity, "id");
+  }
 
-    private JsonArray keyValues(JsonArray json, R record) {
-        Set<String> fields = record.getFieldNames();
-        if (fields != null) {
-            for (String f : fields) {
-                json.add(f);
-                Object o = record.getValue(f);
-                if (o == null) {
-                    json.add("null");
-                } else {
-                    if (o instanceof Boolean || o instanceof Number || o instanceof String) {
-                        json.add(o);
-                    } else {
-                        throw new RuntimeException("Unsupported value type: " + o.getClass().getName());
-                    }
-                }
-            }
+  public RedisMapper(RedisClient redis, String entity, String id) {
+    super(entity, id);
+    this.redis = redis;
+  }
+
+  @Override
+  public void find(final String query, final Handler<AsyncResult<List<R>>> callback) {
+    redis.keys(entity + SEP + query, res1 -> {
+      if (res1.failed()) {
+        callback.handle(Future.failedFuture(res1.cause()));
+        return;
+      }
+
+      final JsonArray keys = res1.result();
+
+      // for each key get if from Redis
+      final List<R> items = new ArrayList<>(keys.size());
+
+      new AsyncIterator<Object>(keys) {
+        @Override
+        public void handle(Object key) {
+          if (hasNext()) {
+            redis.hgetall(entity + SEP + key, res2 -> {
+              if (res2.failed()) {
+                callback.handle(Future.failedFuture(res2.cause()));
+                return;
+              }
+
+              items.add(newRecord(res2.result()));
+              next();
+            });
+          } else {
+            callback.handle(Future.succeededFuture(items));
+          }
         }
-        return json;
-    }
+      };
+    });
+  }
 
+  @Override
+  public void findOne(String query, final Handler<AsyncResult<R>> callback) {
+    redis.hgetall(entity + SEP + query, res1 -> {
+      if (res1.failed()) {
+        callback.handle(Future.failedFuture(res1.cause()));
+        return;
+      }
 
-    @Override
-    public void find(final String query, final AsyncResultHandler<List<R>> callback) {
-        JsonArray args = new JsonArray().add(entity + SEP + query);
+      callback.handle(Future.succeededFuture(newRecord(res1.result())));
+    });
+  }
 
-        final JsonObject json = new JsonObject()
-                .putString("command", "keys")
-                .putArray("args", args);
+  @Override
+  public void findAll(Handler<AsyncResult<List<R>>> callback) {
+    find(ALL, callback);
+  }
 
-        eventBus.send(address, json, new Handler<Message<JsonObject>>() {
-            @Override
-            public void handle(Message<JsonObject> event) {
-                final String status = event.body().getString("status");
+  @Override
+  public void update(String query, R record, final Handler<AsyncResult<Void>> callback) {
+    redis.hmset(entity + SEP + query, record, res1 -> {
+      if (res1.failed()) {
+        callback.handle(Future.failedFuture(res1.cause()));
+        return;
+      }
 
-                if ("error".equals(status)) {
-                    callback.handle(wrapResult(new RuntimeException(event.body().getString("message")), (List<R>) null));
-                    return;
-                }
+      callback.handle(Future.succeededFuture());
 
-                if ("ok".equals(status)) {
-                    final JsonArray keys = event.body().getArray("value");
+    });
+  }
 
-                    // for each key get if from Redis
-                    final List<R> items = new ArrayList<>(keys.size());
+  @Override
+  public void remove(String query, final Handler<AsyncResult<Void>> callback) {
+    redis.del(entity + SEP + query, res1 -> {
+      if (res1.failed()) {
+        callback.handle(Future.failedFuture(res1.cause()));
+        return;
+      }
 
-                    new AsyncIterator<Object>(keys) {
-                        @Override
-                        public void handle(Object key) {
-                            if (hasNext()) {
-                                JsonArray args = new JsonArray().add(entity + SEP + key);
+      callback.handle(Future.succeededFuture());
+    });
+  }
 
-                                final JsonObject json = new JsonObject()
-                                        .putString("command", "hgetall")
-                                        .putArray("args", args);
+  @Override
+  public void save(final R record, final Handler<AsyncResult<String>> callback) {
+    generateId(generateId -> {
+      if (generateId.failed()) {
+        callback.handle(generateId);
+        return;
+      }
 
-                                eventBus.send(address, json, new Handler<Message<JsonObject>>() {
-                                    @Override
-                                    public void handle(Message<JsonObject> event) {
-                                        final String status = event.body().getString("status");
+      record.put(ID, generateId.result());
 
-                                        if ("error".equals(status)) {
-                                            callback.handle(wrapResult(new RuntimeException(event.body().getString("message")), (List<R>) null));
-                                            return;
-                                        }
-
-                                        if ("ok".equals(status)) {
-                                            items.add(newRecord(event.body().getObject("value")));
-                                            next();
-                                        }
-                                    }
-                                });
-                            } else {
-                                callback.handle(wrapResult(null, items));
-                            }
-                        }
-                    };
-                }
-            }
-        });
-    }
-
-    @Override
-    public void findOne(String query, final AsyncResultHandler<R> callback) {
-        JsonArray args = new JsonArray().add(entity + SEP + query);
-
-        final JsonObject json = new JsonObject()
-                .putString("command", "hgetall")
-                .putArray("args", args);
-
-        eventBus.send(address, json, new Handler<Message<JsonObject>>() {
-            @Override
-            public void handle(Message<JsonObject> event) {
-                final String status = event.body().getString("status");
-
-                if ("error".equals(status)) {
-                    callback.handle(wrapResult(new RuntimeException(event.body().getString("message")), (R) null));
-                    return;
-                }
-
-                if ("ok".equals(status)) {
-                    callback.handle(wrapResult(null, newRecord(event.body().getObject("value"))));
-                }
-            }
-        });
-    }
-
-    @Override
-    public void findAll(AsyncResultHandler<List<R>> callback) {
-        find(ALL, callback);
-    }
-
-    @Override
-    public void update(String query, R record, final AsyncResultHandler<Void> callback) {
-        JsonArray args = new JsonArray().add(entity + SEP + query);
-
-        try {
-            keyValues(args, record);
-        } catch (RuntimeException re) {
-            callback.handle(wrapResult(re, (Void) null));
-            return;
+      redis.hmset(entity + SEP + generateId.result(), record, res1 -> {
+        if (res1.failed()) {
+          callback.handle(Future.failedFuture(res1.cause()));
+          return;
         }
 
-        final JsonObject json = new JsonObject()
-                .putString("command", "hmset")
-                .putArray("args", args);
+        callback.handle(Future.succeededFuture(generateId.result()));
+      });
+    });
+  }
 
-        eventBus.send(address, json, new Handler<Message<JsonObject>>() {
-            @Override
-            public void handle(Message<JsonObject> event) {
-                final String status = event.body().getString("status");
+  @Override
+  public void findById(String id, Handler<AsyncResult<R>> callback) {
+    findOne(id, callback);
+  }
 
-                if ("error".equals(status)) {
-                    callback.handle(wrapResult(new RuntimeException(event.body().getString("message")), (Void) null));
-                    return;
-                }
+  @Override
+  public void update(R record, Handler<AsyncResult<Void>> callback) {
+    update(record.getId(), record, callback);
+  }
 
-                if ("ok".equals(status)) {
-                    callback.handle(wrapResult(null, (Void) null));
-                }
-            }
-        });
-    }
+  @Override
+  public void remove(R record, Handler<AsyncResult<Void>> callback) {
+    remove(record.getId(), callback);
+  }
 
-    @Override
-    public void remove(String query, final AsyncResultHandler<Void> callback) {
-        JsonArray args = new JsonArray().add(entity + SEP + query);
+  @Override
+  public void count(String query, final Handler<AsyncResult<Long>> callback) {
+    redis.keys(entity + SEP + query, res1 -> {
+      if (res1.failed()) {
+        callback.handle(Future.failedFuture(res1.cause()));
+        return;
+      }
 
-        final JsonObject json = new JsonObject()
-                .putString("command", "del")
-                .putArray("args", args);
+      callback.handle(Future.succeededFuture((long) res1.result().size()));
+    });
+  }
 
-        eventBus.send(address, json, new Handler<Message<JsonObject>>() {
-            @Override
-            public void handle(Message<JsonObject> event) {
-                final String status = event.body().getString("status");
+  @Override
+  public void count(Handler<AsyncResult<Long>> callback) {
+    count(ALL, callback);
+  }
 
-                if ("error".equals(status)) {
-                    callback.handle(wrapResult(new RuntimeException(event.body().getString("message")), (Void) null));
-                    return;
-                }
+  @Override
+  public void truncate(final Handler<AsyncResult<Void>> callback) {
+    redis.keys(entity + SEP + ALL, res1 -> {
+      if (res1.failed()) {
+        callback.handle(Future.failedFuture(res1.cause()));
+        return;
+      }
 
-                if ("ok".equals(status)) {
-                    callback.handle(wrapResult(null, (Void) null));
-                }
-            }
-        });
-    }
+      // perform real delete
+      redis.delMany(res1.result().getList(), res2 -> {
+        if (res1.failed()) {
+          callback.handle(Future.failedFuture(res2.cause()));
+          return;
+        }
 
-    @Override
-    public void save(final R record, final AsyncResultHandler<String> callback) {
-        generateId(new AsyncResultHandler<String>() {
-            @Override
-            public void handle(final AsyncResult<String> generateId) {
-                if (generateId.failed()) {
-                    callback.handle(generateId);
-                    return;
-                }
+        callback.handle(Future.succeededFuture());
+      });
+    });
+  }
 
-                record.putString(ID, generateId.result());
-
-                JsonArray args = new JsonArray().add(entity + SEP + generateId.result());
-
-                try {
-                    keyValues(args, record);
-                } catch (RuntimeException re) {
-                    callback.handle(wrapResult(re, (String) null));
-                    return;
-                }
-
-                final JsonObject json = new JsonObject()
-                        .putString("command", "hmset")
-                        .putArray("args", args);
-
-                eventBus.send(address, json, new Handler<Message<JsonObject>>() {
-                    @Override
-                    public void handle(Message<JsonObject> event) {
-                        final String status = event.body().getString("status");
-
-                        if ("error".equals(status)) {
-                            callback.handle(wrapResult(new RuntimeException(event.body().getString("message")), (String) null));
-                            return;
-                        }
-
-                        if ("ok".equals(status)) {
-                            callback.handle(wrapResult(null, generateId.result()));
-                        }
-                    }
-                });
-            }
-        });
-    }
-
-    @Override
-    public void findById(String id, AsyncResultHandler<R> callback) {
-        findOne(id, callback);
-    }
-
-    @Override
-    public void update(R record, AsyncResultHandler<Void> callback) {
-        update(record.getId(), record, callback);
-    }
-
-    @Override
-    public void remove(R record, AsyncResultHandler<Void> callback) {
-        remove(record.getId(), callback);
-    }
-
-    @Override
-    public void count(String query, final AsyncResultHandler<Number> callback) {
-        JsonArray args = new JsonArray().add(entity + SEP + query);
-
-        final JsonObject json = new JsonObject()
-                .putString("command", "keys")
-                .putArray("args", args);
-
-        eventBus.send(address, json, new Handler<Message<JsonObject>>() {
-            @Override
-            public void handle(Message<JsonObject> event) {
-                final String status = event.body().getString("status");
-
-                if ("error".equals(status)) {
-                    callback.handle(wrapResult(new RuntimeException(event.body().getString("message")), (Number) null));
-                    return;
-                }
-
-                if ("ok".equals(status)) {
-                    JsonArray keys = event.body().getArray("value");
-                    callback.handle(wrapResult(null, (Number) keys.size()));
-                }
-            }
-        });
-    }
-
-    @Override
-    public void count(AsyncResultHandler<Number> callback) {
-        count(ALL, callback);
-    }
-
-    @Override
-    public void truncate(final AsyncResultHandler<Void> callback) {
-        JsonArray args = new JsonArray().add(entity + SEP + ALL);
-
-        final JsonObject json = new JsonObject()
-                .putString("command", "keys")
-                .putArray("args", args);
-
-        eventBus.send(address, json, new Handler<Message<JsonObject>>() {
-            @Override
-            public void handle(Message<JsonObject> event) {
-                final String status = event.body().getString("status");
-
-                if ("error".equals(status)) {
-                    callback.handle(wrapResult(new RuntimeException(event.body().getString("message")), (Void) null));
-                    return;
-                }
-
-                if ("ok".equals(status)) {
-                    JsonArray keys = event.body().getArray("value");
-
-                    // perform real delete
-                    final JsonObject json = new JsonObject()
-                            .putString("command", "del")
-                            .putArray("args", keys);
-
-                    eventBus.send(address, json, new Handler<Message<JsonObject>>() {
-                        @Override
-                        public void handle(Message<JsonObject> event) {
-                            final String status = event.body().getString("status");
-
-                            if ("error".equals(status)) {
-                                callback.handle(wrapResult(new RuntimeException(event.body().getString("message")), (Void) null));
-                                return;
-                            }
-
-                            if ("ok".equals(status)) {
-                                callback.handle(wrapResult(null, (Void) null));
-                            }
-                        }
-                    });
-                }
-            }
-        });
-    }
-
-    private void generateId(final AsyncResultHandler<String> callback) {
-        final JsonObject json = new JsonObject()
-                    .putString("command", "incr")
-                    .putArray("args", new JsonArray().add(entity));
-
-        eventBus.send(address, json, new Handler<Message<JsonObject>>() {
-            @Override
-            public void handle(Message<JsonObject> event) {
-                final String status = event.body().getString("status");
-
-                if ("error".equals(status)) {
-                    callback.handle(wrapResult(new RuntimeException(event.body().getString("message")), (String) null));
-                    return;
-                }
-
-                if ("ok".equals(status)) {
-                    // Ids have been returned
-                    String id = event.body().getValue("value").toString();
-                    callback.handle(wrapResult(null, id));
-                }
-            }
-        });
-    }
+  private void generateId(final Handler<AsyncResult<String>> callback) {
+    redis.incr(entity, res1 -> {
+      if (res1.failed()) {
+        callback.handle(Future.failedFuture(res1.cause()));
+        return;
+      }
+      // Ids have been returned
+      String id = res1.result().toString();
+      callback.handle(Future.succeededFuture(id));
+    });
+  }
 }

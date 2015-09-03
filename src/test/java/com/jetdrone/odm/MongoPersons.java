@@ -1,8 +1,8 @@
 package com.jetdrone.odm;
 
 import com.jetdrone.odm.backend.MongoDBMapper;
-import org.vertx.java.core.eventbus.EventBus;
-import org.vertx.java.core.json.JsonObject;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.MongoClient;
 
 import java.util.Map;
 
@@ -22,8 +22,8 @@ public class MongoPersons extends MongoDBMapper<MongoPersons.Person> {
         }
     }
 
-    public MongoPersons(EventBus eventBus, String address) {
-        super(eventBus, address, "users");
+    public MongoPersons(MongoClient mongo) {
+        super(mongo, "users");
     }
 
     @Override
@@ -32,6 +32,6 @@ public class MongoPersons extends MongoDBMapper<MongoPersons.Person> {
             return null;
         }
 
-        return new Person(json.toMap());
+        return new Person(json.getMap());
     }
 }
