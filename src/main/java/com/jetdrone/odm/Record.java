@@ -1,11 +1,7 @@
 package com.jetdrone.odm;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.AsyncResultHandler;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
-
-import java.util.Map;
 
 public abstract class Record<PK> extends JsonObject {
 
