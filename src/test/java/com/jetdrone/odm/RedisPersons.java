@@ -4,8 +4,6 @@ import com.jetdrone.odm.backend.RedisMapper;
 import io.vertx.core.json.JsonObject;
 import io.vertx.redis.RedisClient;
 
-import java.util.Map;
-
 public class RedisPersons extends RedisMapper<RedisPersons.Person> {
 
     public class Person extends Record<String> {
@@ -13,7 +11,7 @@ public class RedisPersons extends RedisMapper<RedisPersons.Person> {
             super(RedisPersons.this);
         }
 
-        public Person(Map<String, Object> map) {
+        public Person(JsonObject map) {
             super(RedisPersons.this, map);
         }
 
@@ -32,6 +30,6 @@ public class RedisPersons extends RedisMapper<RedisPersons.Person> {
             return null;
         }
 
-        return new Person(json.getMap());
+        return new Person(json);
     }
 }

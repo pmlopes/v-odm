@@ -8,7 +8,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 import com.jetdrone.odm.MongoPersons.Person;
@@ -111,42 +110,39 @@ public class MongoDBTest {
     person.put("name", "Paulo");
     person.put("age", 33);
 
-    person.save(new Handler<Boolean>() {
-      @Override
-      public void handle(Boolean saved) {
-        if (!saved) {
+    person.save(saved -> {
+      if (!saved) {
+        test.fail();
+        async.complete();
+        return;
+      }
+      // user has been saved, the ID should be filled now
+      test.assertNotNull(person.getValue(mapper.ID));
+
+      person.put("name", "Paulo Lopes");
+
+      person.update(updated -> {
+        if (!updated) {
           test.fail();
           async.complete();
           return;
         }
-        // user has been saved, the ID should be filled now
-        test.assertNotNull(person.getValue(mapper.ID));
 
-        person.put("name", "Paulo Lopes");
-
-        person.update(updated -> {
-          if (!updated) {
-            test.fail();
+        // load from the DB
+        mapper.findById(person.getId(), findById -> {
+          if (findById.failed()) {
+            test.fail(findById.cause());
             async.complete();
             return;
           }
 
-          // load from the DB
-          mapper.findById(person.getId(), findById -> {
-            if (findById.failed()) {
-              test.fail(findById.cause());
-              async.complete();
-              return;
-            }
+          Person person1 = findById.result();
 
-            Person person1 = findById.result();
-
-            test.assertEquals("Paulo Lopes", person1.getString("name"));
-            test.assertEquals(33, person1.getInteger("age"));
-            async.complete();
-          });
+          test.assertEquals("Paulo Lopes", person1.getString("name"));
+          test.assertEquals(33, person1.getInteger("age"));
+          async.complete();
         });
-      }
+      });
     });
   }
 

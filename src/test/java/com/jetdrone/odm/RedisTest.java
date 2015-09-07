@@ -88,7 +88,7 @@ public class RedisTest {
       // load from the DB
       mapper.findOne(id, findById -> {
         if (findById.failed()) {
-          test.fail(findById.cause().getMessage());
+          test.fail(findById.cause());
           return;
         }
 

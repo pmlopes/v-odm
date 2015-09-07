@@ -4,8 +4,6 @@ import com.jetdrone.odm.backend.JdbcMapper;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.jdbc.JDBCClient;
 
-import java.util.Map;
-
 public class JdbcPersons extends JdbcMapper<JdbcPersons.Person> {
 
     public class Person extends Record<Number> {
@@ -13,7 +11,7 @@ public class JdbcPersons extends JdbcMapper<JdbcPersons.Person> {
             super(JdbcPersons.this);
         }
 
-        public Person(Map<String, Object> map) {
+        public Person(JsonObject map) {
             super(JdbcPersons.this, map);
         }
 
@@ -32,7 +30,7 @@ public class JdbcPersons extends JdbcMapper<JdbcPersons.Person> {
             return null;
         }
 
-        return new Person(json.getMap());
+        return new Person(json);
     }
 
 }

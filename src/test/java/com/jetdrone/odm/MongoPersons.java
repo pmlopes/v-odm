@@ -4,8 +4,6 @@ import com.jetdrone.odm.backend.MongoDBMapper;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 
-import java.util.Map;
-
 public class MongoPersons extends MongoDBMapper<MongoPersons.Person> {
 
     public class Person extends Record<String> {
@@ -13,7 +11,7 @@ public class MongoPersons extends MongoDBMapper<MongoPersons.Person> {
             super(MongoPersons.this);
         }
 
-        public Person(Map<String, Object> map) {
+        public Person(JsonObject map) {
             super(MongoPersons.this, map);
         }
 
@@ -32,6 +30,6 @@ public class MongoPersons extends MongoDBMapper<MongoPersons.Person> {
             return null;
         }
 
-        return new Person(json.getMap());
+        return new Person(json);
     }
 }
