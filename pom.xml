@@ -10,7 +10,7 @@
   <version>1.0.0-SNAPSHOT</version>
 
   <properties>
-    <vertx.version>3.1.0-SNAPSHOT</vertx.version>
+    <vertx.version>3.2.1</vertx.version>
   </properties>
 
   <dependencies>
@@ -24,6 +24,24 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
+      <version>${vertx.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-codegen</artifactId>
+      <version>${vertx.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-lang-js</artifactId>
+      <version>${vertx.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-lang-groovy</artifactId>
       <version>${vertx.version}</version>
     </dependency>
 
@@ -49,6 +67,13 @@
     </dependency>
 
     <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-mysql-postgresql-client</artifactId>
+      <version>${vertx.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.11</version>
@@ -65,7 +90,7 @@
     <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
-      <version>1.4.187</version>
+      <version>1.4.191</version>
       <scope>test</scope>
     </dependency>
 
@@ -82,6 +107,30 @@
             <source>1.8</source>
             <target>1.8</target>
           </configuration>
+          <executions>
+            <execution>
+              <id>default-compile</id>
+              <configuration>
+                <annotationProcessors>
+                  <annotationProcessor>io.vertx.codegen.CodeGenProcessor</annotationProcessor>
+                </annotationProcessors>
+                <compilerArgs>
+                  <arg>-AoutputDirectory=${project.basedir}/src/main</arg>
+                </compilerArgs>
+              </configuration>
+            </execution>
+            <execution>
+              <id>default-testCompile</id>
+              <configuration>
+                <annotationProcessors>
+                  <annotationProcessor>io.vertx.codegen.CodeGenProcessor</annotationProcessor>
+                </annotationProcessors>
+                <compilerArgs>
+                  <arg>-AoutputDirectory=${project.basedir}/src/test</arg>
+                </compilerArgs>
+              </configuration>
+            </execution>
+          </executions>
         </plugin>
       </plugins>
     </pluginManagement>
